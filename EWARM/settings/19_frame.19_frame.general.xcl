@@ -1,0 +1,15 @@
+"D:\Program\arm\bin\armproc.dll" 
+
+"D:\Program\arm\bin\armjlink2.dll" 
+
+"D:\Workspace\robocon\code\frame\EWARM\19_frame\Exe\19_frame.out" 
+
+--plugin="D:\Program\arm\bin\armbat.dll" 
+
+--device_macro="D:\Program\arm\config\debugger\ST\STM32F4xx.dmac" 
+
+--flash_loader="D:\Program\arm\config\flashloader\ST\FlashSTM32F4xxx.board" 
+
+
+
+
