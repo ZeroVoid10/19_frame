@@ -103,51 +103,9 @@ void HAL_CAN_RxFifo0FullCallback(CAN_HandleTypeDef *hcan) {
 }
 
 void CAN_config(CAN_HandleTypeDef *hcan) {
-    CAN_FilterTypeDef sFilterConfig;
-    int id_len;
-    id_len = sizeof(std_id)/sizeof(std_id[0]);
-    uint16_t mask, tmp,i;
-
-    /* Configure the CAN Filter 
-     bxCAN提供28个位宽可变/可配置的标识符过滤器组
-     通过设置CAN_FMR的FBMx位 设置过滤器类型 0: mask mode; 1: list mode
-  */
-    sFilterConfig.FilterBank = 0;
-    sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
-    sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
-    sFilterConfig.FilterIdHigh = std_id[0]<< 5;
-    sFilterConfig.FilterIdLow = 0x0000;
-    sFilterConfig.FilterMaskIdHigh = (0x7ff<<5);
-    sFilterConfig.FilterMaskIdLow = (0x0000|0x02);
-    /* CAN_FILTERSCALE_32BIT
-     FilterIdHigh = StdId << 5 
-     FilterIdHigh = (ExtId << 3)>>16 & 0xFFFF
-     FIlterIdLow   = ((uint16_t)(ExtId <<3)) | CAN_ID_EXT;*/
-    /*
-    sFilterConfig.FilterIdHigh = id_len? (std_id[0]<<5):0x0000;
-    sFilterConfig.FilterIdLow = 0x0000;
-    mask = 0x7ff;
-    for (i=0; i<id_len; i++) {
-        tmp = ~(std_id[i]^std_id[0]);
-        mask &= tmp;
-    }
-    sFilterConfig.FilterMaskIdHigh = (mask<<5);
-    sFilterConfig.FilterMaskIdLow = (0x0000|0x02);
-    */
-    /*
-    sFilterConfig.FilterIdHigh = 0x0000;
-    sFilterConfig.FilterIdLow = 0x0000;
-    sFilterConfig.FilterMaskIdHigh = 0x0000;
-    sFilterConfig.FilterMaskIdLow = 0x0000;
-    */
-    sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
-    sFilterConfig.FilterActivation = ENABLE;
-    sFilterConfig.SlaveStartFilterBank = 14;
-
-    if (HAL_CAN_ConfigFilter(hcan, &sFilterConfig) != HAL_OK) {
-        /* Filter configuration Error */
-        Error_Handler();
-    }
+    
+    can_std_mask_filter_conf(hcan, std_id, sizeof(std_id)/sizeof(std_id[0]), 0);
+    //can_std_list_filter_conf(hcan, 325, 0);
 
     /* Start the CAN peripheral */
     if (HAL_CAN_Start(hcan) != HAL_OK) {
@@ -173,6 +131,72 @@ void CAN_config(CAN_HandleTypeDef *hcan) {
     TxHeader.TransmitGlobalTime = DISABLE;
 }
 
+void can_std_mask_filter_conf(CAN_HandleTypeDef *hcan, uint32_t *std_id, uint32_t len, uint32_t bank_num) {
+    CAN_FilterTypeDef sFilterConfig;
+    uint16_t mask, tmp,i;
+
+    /* Configure the CAN Filter 
+     bxCAN提供28个位宽可变/可配置的标识符过滤器组
+     通过设置CAN_FMR的FBMx位 设置过滤器类型 0: mask mode; 1: list mode
+  */
+    sFilterConfig.FilterBank = bank_num;
+    sFilterConfig.FilterMode = CAN_FILTERMODE_IDMASK;
+    sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+    /*
+    sFilterConfig.FilterIdHigh = (std_id[0]<<5);
+    sFilterConfig.FilterIdLow = 0x0000;
+    sFilterConfig.FilterMaskIdHigh = (0x7ff<<5);
+    sFilterConfig.FilterMaskIdLow = (0x0000|0x02);
+    */
+    /* CAN_FILTERSCALE_32BIT
+     FilterIdHigh = StdId << 5 
+     FilterIdHigh = (ExtId << 3)>>16 & 0xFFFF
+     FIlterIdLow   = ((uint16_t)(ExtId <<3)) | CAN_ID_EXT;*/
+    sFilterConfig.FilterIdHigh = len? (std_id[0]<<5):0x0000;
+    sFilterConfig.FilterIdLow = 0x0000;
+    mask = 0x7ff;
+    for (i=0; i<len; i++) {
+        tmp = std_id[i]^(~std_id[0]);
+        mask &= tmp;
+    }
+    sFilterConfig.FilterMaskIdHigh = (mask<<5);
+    sFilterConfig.FilterMaskIdLow = (0x0000|0x02); // 0x02标准帧 数据帧
+    /*
+    sFilterConfig.FilterIdHigh = 0x0000;
+    sFilterConfig.FilterIdLow = 0x0000;
+    sFilterConfig.FilterMaskIdHigh = 0x0000;
+    sFilterConfig.FilterMaskIdLow = 0x0000;
+    */
+    sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
+    sFilterConfig.FilterActivation = ENABLE;
+    sFilterConfig.SlaveStartFilterBank = 14;
+
+    if (HAL_CAN_ConfigFilter(hcan, &sFilterConfig) != HAL_OK) {
+        /* Filter configuration Error */
+        Error_Handler();
+    }
+}
+
+void can_std_list_filter_conf(CAN_HandleTypeDef *hcan, uint32_t id, uint32_t bank_num) {
+    CAN_FilterTypeDef sFilterConfig;
+
+    sFilterConfig.FilterBank = bank_num;
+    sFilterConfig.FilterMode = CAN_FILTERMODE_IDLIST;
+    sFilterConfig.FilterScale = CAN_FILTERSCALE_32BIT;
+    sFilterConfig.FilterIdHigh = (id<<5);
+    sFilterConfig.FilterIdLow = 0x0000;
+    sFilterConfig.FilterMaskIdHigh = (id<<5);
+    sFilterConfig.FilterMaskIdLow = 0x0000;
+    sFilterConfig.FilterFIFOAssignment = CAN_RX_FIFO0;
+    sFilterConfig.FilterActivation = ENABLE;
+    sFilterConfig.SlaveStartFilterBank = 14;
+
+    if (HAL_CAN_ConfigFilter(hcan, &sFilterConfig) != HAL_OK) {
+        /* Filter configuration Error */
+        Error_Handler();
+    }
+
+}
 
 static unsigned int hash_id(const void* id) {
     return *((unsigned int*)id);
