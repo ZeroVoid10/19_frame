@@ -1059,6 +1059,9 @@
                     <name>$PROJ_DIR$\..\simplelib\Src\cmd_func.c</name>
                 </file>
                 <file>
+                    <name>$PROJ_DIR$\..\simplelib\Src\flags.c</name>
+                </file>
+                <file>
                     <name>$PROJ_DIR$\..\simplelib\Src\flash.c</name>
                 </file>
                 <file>
