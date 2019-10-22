@@ -451,6 +451,7 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
     
     uint32_t isrflags   = READ_REG(huart->Instance->SR);//手册上有讲，清错误都�?先读SR
+    UNUSED(isrflags);
     if((__HAL_UART_GET_FLAG(huart, UART_FLAG_PE))!=RESET)
     {
         READ_REG(huart->Instance->DR);//PE清标志，第二步读DR
