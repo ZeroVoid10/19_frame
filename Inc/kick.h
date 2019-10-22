@@ -18,8 +18,8 @@ extern "C" {
 #define MAGNET_PORT					    GPIOE // 
 #define MAGNET_PIN_1					GPIO_PIN_7 // 
 #define MAGNET_PIN_2					GPIO_PIN_8 // 
-#define MAGNET_SET					    GPIO_PIN_RESET // 
-#define MAGNET_FREE                     GPIO_PIN_SET
+#define MAGNET_SET					    GPIO_PIN_SET // 
+#define MAGNET_FREE                     GPIO_PIN_RESET
 
 /**
  * @brief	电磁铁状态
