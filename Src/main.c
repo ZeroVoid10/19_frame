@@ -30,6 +30,8 @@
 /* USER CODE BEGIN Includes */
 #include "simplelib.h"
 #include "cmd_func.h"
+#include "task.h"
+#include "flags.h"
 
 /* USER CODE END Includes */
 
@@ -103,12 +105,13 @@ int main(void)
   MX_UART5_Init();
   MX_UART4_Init();
   MX_TIM3_Init();
-  MX_TIM1_Init();
+  MX_TIM2_Init();
 
   /* Initialize interrupts */
   MX_NVIC_Init();
   /* USER CODE BEGIN 2 */
     simplelib_init(&huart3, &hcan1);
+    task_init();
 
   /* USER CODE END 2 */
 
@@ -116,6 +119,12 @@ int main(void)
   /* USER CODE BEGIN WHILE */
     while (1) {
       simplelib_run();
+      if (test_flag) {
+        if (_5ms) {
+          _5ms = 0;
+          //kikc_up_test();
+        }
+      }
       
     /* USER CODE END WHILE */
 
@@ -187,7 +196,15 @@ static void MX_NVIC_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+static uint32_t time_cnt = 0;
 void HAL_SYSTICK_Callback(void) {
+  time_cnt++;
+  if (time_cnt++ % 5 == 0) {
+    _5ms = 1;
+  }
+  if (time_cnt == 10000) {
+    time_cnt = 0;
+  }
   #ifdef SL_DEBUG
   //uprintf("time test\r\n");
   #endif // SL_DEBUG  
