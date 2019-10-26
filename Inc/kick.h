@@ -19,7 +19,7 @@ extern "C" {
  * Control Define
  *******************************************************************************/
 /* Magnet Motro Control Define -----------------------------------------------------*/
-#define MAG_MTR_SID                     0x15                // 驱动电磁铁电机CAN标准id
+#define MAG_MTR_SID                     66                // 驱动电磁铁电机CAN标准id
 #define SPR_MTR_EID                     33                  // 压缩弹簧电机CAN扩张id
 /* Magnet/Relay Control Define -----------------------------------------------------*/
 #define MAGNET_PORT					    GPIOE // 
@@ -75,6 +75,7 @@ typedef enum mag_mtr_mode {
  * Variables
  *******************************************************************************/
 extern MAGNET_STATE magnet_state;
+extern struct md_state mag_mtr_can_state;
 
 int kick_init(void);
 /* Kick Control -----------------------------------------------------*/

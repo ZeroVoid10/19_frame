@@ -14,13 +14,16 @@
 #include "main.h"
 
 /* Variables -----------------------------------------------------*/
+struct md_state mag_mtr_can_state = {0};
+
 KICK_MS kick_ms = KICK_READY;  // 初始就是就绪,有待商榷
 MAGNET_STATE magnet_state = NO_MAGNET;
-uint32_t mag_mtr_up_time = 5000;    // TODO: ZeroVoid	due:10/26	write to flash
-uint32_t mag_delay_time = 50;
+uint32_t mag_mtr_up_time = 3700;    // TODO: ZeroVoid	due:10/26	write to flash
+uint32_t mag_mtr_up_pos_time = 13500;
+uint32_t mag_delay_time = 100;
 int32_t  kicking_mag_pos = -100;    // 释放弹簧后电磁的复位版位置
-int32_t  spr_mtr_back_duty = 10;
-int32_t  spr_mtr_free_duty = -5;
+int32_t  spr_mtr_back_duty = 60;
+int32_t  spr_mtr_free_duty = -50;
 
 /* Kick Part Init -----------------------------------------------------*/
 int kick_init(void) {
@@ -114,18 +117,21 @@ void mag_mtr_up_test(uint8_t mode, int arg) {
         md_set_duty(MAG_MTR_SID, 0);
         break;
     case MMTR_SPEED:
-        md_set_duty(MAG_MTR_SID, arg);
-        vesc_set_duty(SPR_MTR_EID, spr_mtr_free_duty);
+        // test find for md
         md_set_speed(MAG_MTR_SID, arg);
+        vesc_set_duty(SPR_MTR_EID, spr_mtr_free_duty);
         HAL_Delay(mag_mtr_up_time);
         vesc_set_duty(SPR_MTR_EID, 0);
         magnet_set();
         HAL_Delay(mag_delay_time);
+        md_set_duty(MAG_MTR_SID, 0);
+        break;
 
     case MMTR_POS:
+        // -20 70
         vesc_set_duty(SPR_MTR_EID, spr_mtr_free_duty);
         md_set_position(MAG_MTR_SID, arg);
-        HAL_Delay(mag_mtr_up_time);
+        HAL_Delay(mag_mtr_up_pos_time);
         vesc_set_duty(SPR_MTR_EID, 0);
         magnet_set();
         HAL_Delay(mag_delay_time);
