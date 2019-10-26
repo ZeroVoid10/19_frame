@@ -32,6 +32,7 @@
 #include "cmd_func.h"
 #include "task.h"
 #include "flags.h"
+#include "kick.h"
 
 /* USER CODE END Includes */
 
@@ -122,7 +123,7 @@ int main(void)
       if (test_flag) {
         if (_5ms) {
           _5ms = 0;
-          //kikc_up_test();
+          kick_test(&kick_ctrl);
         }
       }
       
