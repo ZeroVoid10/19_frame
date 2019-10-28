@@ -305,6 +305,10 @@ MAGNET_STATE magnet_free(void) {
 
 /* Private Function -----------------------------------------------------*/
 // only positive param 
+/**
+ * @brief	通过小电机编码器计算大电机占空比
+ * @note	Only positive param haved be tested
+ */
 float set_spr_mtr_duty(struct kick_controller *ctrl) {
     const float basic_angle = acos(192/300);
     int a = 300, b = 192;
@@ -314,5 +318,4 @@ float set_spr_mtr_duty(struct kick_controller *ctrl) {
     Limit(speed, 22.5);
     float res = speed/22.5*100;
     vesc_set_duty(SPR_MTR_EID, res);
-    return res;
-}
+    return res;     // 返回值方便查看计算结果的正确性
