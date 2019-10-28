@@ -74,7 +74,7 @@ typedef enum mag_mtr_mode {
     MMTR_DUTY,
     MMTR_SPEED,
     MMTR_POS,
-    MMTR_S_DEP_POS
+    MMTR_LIN_SPEED
 } MAG_MTR_MODE;
 
 struct kick_controller {
@@ -90,6 +90,7 @@ struct kick_controller {
     // control param
     MAG_MTR_MODE        mag_mtr_mode;
     int32_t             mag_mtr_up_arg;  // speed or position depend on mag_mtr_mode
+    int32_t             mag_mtr_up_pos;
     int32_t             mag_mtr_kick_pos; // 释放弹簧后 电磁铁电机位置
     int32_t             spr_mtr_back_duty;
     int32_t             spr_mtr_free_duty;
@@ -97,6 +98,7 @@ struct kick_controller {
     uint32_t            mag_mtr_up_time;
     uint32_t            mag_delay_time;
     uint32_t            spr_mtr_back_time;
+    uint32_t            spr_trans_time;     // 释放电磁铁后弹簧到达稳定时间
 };
 
 /*******************************************************************************
@@ -123,7 +125,7 @@ MAGNET_STATE magnet_toggle(void);
 MAGNET_STATE magnet_set(void);
 MAGNET_STATE magnet_free(void);
 
-
+float set_spr_mtr_duty(struct kick_controller *ctrl);
 
 #ifdef __cplusplus
 }
