@@ -126,6 +126,7 @@ MAGNET_STATE magnet_set(void);
 MAGNET_STATE magnet_free(void);
 
 float set_spr_mtr_duty(struct kick_controller *ctrl);
+float set_mag_mtr_speed(struct kick_controller *ctrl);
 
 #ifdef __cplusplus
 }

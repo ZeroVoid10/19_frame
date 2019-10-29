@@ -6,7 +6,7 @@
  * Version:			0.1
  * Data:			2019/10/20 Sun 09:44
  *******************************************************************************/
-#include "kick.h"
+#include "kick.h"m_duty 66 0
 #include "utils.h"
 #include "cmd.h"
 #include "flags.h"
@@ -23,16 +23,14 @@ struct kick_controller kick_ctrl = {
     .mag_mtr_up_arg = 72,
     .mag_mtr_up_pos = 80,
     .mag_mtr_kick_pos = 0,
-    .spr_mtr_back_duty = 60,
+    .spr_mtr_back_duty = 30,
     .spr_mtr_free_duty = -50,
     // init time param
     .mag_mtr_up_time = 3700,
-    .mag_delay_time = 150,
+    .mag_delay_time = (uint32_t)(5000/9),
     .spr_mtr_back_time = 1000,
     .spr_trans_time = 10000     // 12s
 };
-
-/* Private Function -----------------------------------------------------*/
 
 /* Kick Part Init -----------------------------------------------------*/
 int kick_ctrl_init(struct kick_controller *ctrl) {
@@ -197,31 +195,36 @@ void mag_mtr_up_test(struct kick_controller *ctrl) {
         // test fine for md
         switch (ctrl->mag_mtr_state) {
         case MAG_MTR_READY:
-            md_set_speed(MAG_MTR_SID, 5);
-            set_spr_mtr_duty(ctrl);
+            // md_set_speed(MAG_MTR_SID, 5);
+            // set_spr_mtr_duty(ctrl);
+            set_mag_mtr_speed(ctrl);
             ctrl->mag_mtr_state = MAG_MTR_UPPING;
             break;
         
         case MAG_MTR_UPPING:
-            if (ctrl->mag_mtr_can_state.position >= ctrl->mag_mtr_up_pos - 5) {
+            if (ctrl->mag_mtr_can_state.position >= ctrl->mag_mtr_up_pos - 2) {
                 vesc_set_duty(SPR_MTR_EID, 0);
-                md_set_position(MAG_MTR_SID, ctrl->mag_mtr_up_pos);
+                // md_set_position(MAG_MTR_SID, ctrl->mag_mtr_up_pos);
                 if (ctrl->magnet_state == NO_MAGNET) {
                     magnet_set();
                 }
-                HAL_Delay(200);
+                HAL_Delay(ctrl->mag_delay_time);
                 md_set_duty(MAG_MTR_SID, 0);
+                ctrl->magnet_state = MAG_MTR_FREE;
                 ctrl->state = KICK_MAG_CONNECTED;
             }
+            /*
             else if (ctrl->mag_mtr_can_state.position >= 50) {
                 md_set_speed(MAG_MTR_SID, 20);
             } else if (ctrl->mag_mtr_can_state.position >= 35){
                 md_set_speed(MAG_MTR_SID, 20);
             } else if (ctrl->mag_mtr_can_state.position >= 15) {
                 md_set_speed(MAG_MTR_SID, 17);
-            } else {
-                md_set_speed(MAG_MTR_SID, 5);
-                set_spr_mtr_duty(ctrl);
+            } */
+            else {
+                set_mag_mtr_speed(ctrl);
+                // md_set_speed(MAG_MTR_SID, 5);
+                // set_spr_mtr_duty(ctrl);
             }
             break;
         
@@ -243,12 +246,13 @@ void mag_mtr_up_test(struct kick_controller *ctrl) {
             //md_set_position(MAG_MTR_SID, ctrl->mag_mtr_up_arg);
             if (ctrl->mag_mtr_can_state.position >= ctrl->mag_mtr_up_arg - 2) {
                 vesc_set_duty(SPR_MTR_EID, 0);
-                magnet_set();
-                if (ctrl->mag_mtr_can_state.position >= ctrl->mag_mtr_up_arg)
-                       HAL_Delay(200);
-                    md_set_duty(MAG_MTR_SID, 0);
-                    ctrl->magnet_state = MAG_MTR_FREE;
-                    ctrl->state = KICK_MAG_CONNECTED;
+                if (ctrl->magnet_state == NO_MAGNET) {
+                    magnet_set();
+                }
+                HAL_Delay(ctrl->mag_delay_time);
+                md_set_duty(MAG_MTR_SID, 0);
+                ctrl->magnet_state = MAG_MTR_FREE;
+                ctrl->state = KICK_MAG_CONNECTED;
             } else {
                 set_spr_mtr_duty(ctrl);
             }
@@ -309,13 +313,32 @@ MAGNET_STATE magnet_free(void) {
  * @brief	通过小电机编码器计算大电机占空比
  * @note	Only positive param haved be tested
  */
+static const int HEDM_PPS = 1000;   // Pluse Per Second
+static const int SPR_MTR_MAX_RPM = 60;  // Round Per Minute;
+static const float SPR_MTR_R = 22.5;    // 大电机轴半径
+static int a = 300, b = 192;
+static int diff = 60, k1 = 2.5;
+// diff 6cm  spr angle 33 degree
 float set_spr_mtr_duty(struct kick_controller *ctrl) {
-    const float basic_angle = acos(192/300);
-    int a = 300, b = 192;
-    float angle = ctrl->mag_mtr_can_state.position/250/2*PI + basic_angle;
+    const float basic_angle = acos((b-diff)/a);    // 计算可能有点问题
+    float angle = ctrl->mag_mtr_can_state.position*2*PI/HEDM_PPS/2 + basic_angle;
     float c = sqrtf(a*a + b*b - 2*a*b*cos(angle));
-    float speed = a*b*sin(angle)*ctrl->mag_mtr_can_state.speed/500*PI/c;
-    Limit(speed, 22.5);
-    float res = speed/22.5*100;
+    float speed = a*b*sin(angle)*ctrl->mag_mtr_can_state.speed/HEDM_PPS*PI/c;
+    speed *= k1;
+    Limit(speed, SPR_MTR_R);
+    float res = speed/SPR_MTR_R*(-100);
     vesc_set_duty(SPR_MTR_EID, res);
     return res;     // 返回值方便查看计算结果的正确性
+}
+
+float set_mag_mtr_speed(struct kick_controller *ctrl) {
+    const float basic_angle = acos((b-diff)/a);    // 计算可能有点问题
+    float line_speed = ctrl->spr_mtr_free_duty*SPR_MTR_R/(-100);
+    float angle = ctrl->mag_mtr_can_state.position*2*PI/HEDM_PPS/2 + basic_angle;
+    float c = sqrtf(a*a + b*b - 2*a*b*cos(angle));
+    float mag_mtr_angle_speed = 2*line_speed*c/(a*b*sin(angle));
+    float res = mag_mtr_angle_speed*HEDM_PPS/(2*PI);
+    md_set_speed(MAG_MTR_SID, (int)res);
+    set_spr_mtr_duty(ctrl);
+    return res;
+}
