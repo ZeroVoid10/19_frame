@@ -87,13 +87,16 @@ struct kick_controller {
     struct md_state     mag_mtr_can_state;
     MAG_MTR_S           mag_mtr_state;
     MAGNET_STATE        magnet_state;    // TODO: ZeroVoid	due:10/28	merge outside varablies
+    float               spr_mtr_pos;
+    float               basic_angle;
     // control param
     MAG_MTR_MODE        mag_mtr_mode;
-    int32_t             mag_mtr_up_arg;  // speed or position depend on mag_mtr_mode
-    int32_t             mag_mtr_up_pos;
-    int32_t             mag_mtr_kick_pos; // 释放弹簧后 电磁铁电机位置
+    int32_t             mag_mtr_up_arg;  // 该参数可能没有了 speed or position depend on mag_mtr_mode
+    int32_t             mag_mtr_up_pos; 
+    int32_t             mag_mtr_kick_pos; // 可能没用了 释放弹簧后 电磁铁电机位置
     int32_t             spr_mtr_back_duty;
     int32_t             spr_mtr_free_duty;
+    int32_t             spr_mtr_kick_pos;  // 击球时弹簧电机磁编码器读数位置, 之后应该由函数通过车辆位置信息计算击球位置
     // time param
     uint32_t            mag_mtr_up_time;
     uint32_t            mag_delay_time;
@@ -125,8 +128,11 @@ MAGNET_STATE magnet_toggle(void);
 MAGNET_STATE magnet_set(void);
 MAGNET_STATE magnet_free(void);
 
+/* Private Functions -----------------------------------------------------*/
+// 方便cmd测试函数是否工作正常, 所以Private 放在外面
 float set_spr_mtr_duty(struct kick_controller *ctrl);
 float set_mag_mtr_speed(struct kick_controller *ctrl);
+float set_spr_mtr_kick_pos(struct kick_controller *ctrl);
 
 #ifdef __cplusplus
 }

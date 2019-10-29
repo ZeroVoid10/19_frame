@@ -10,6 +10,7 @@
 #include "utils.h"
 #include "cmd.h"
 #include "flags.h"
+#include "as5047p.h"
 
 /* Variables -----------------------------------------------------*/
 struct kick_controller kick_ctrl = {
@@ -18,12 +19,13 @@ struct kick_controller kick_ctrl = {
     .mag_mtr_can_state = {0},
     .mag_mtr_state = MAG_MTR_READY,
     .magnet_state = NO_MAGNET,
+    .basic_angle = 0,
     // init control param
-    .mag_mtr_mode = MMTR_POS,
-    .mag_mtr_up_arg = 72,
-    .mag_mtr_up_pos = 80,
+    .mag_mtr_mode = MMTR_LIN_SPEED,
+    .mag_mtr_up_arg = 72,       // 该参数可能没有了
+    .mag_mtr_up_pos = 68,
     .mag_mtr_kick_pos = 0,
-    .spr_mtr_back_duty = 30,
+    .spr_mtr_back_duty = 20,
     .spr_mtr_free_duty = -50,
     // init time param
     .mag_mtr_up_time = 3700,
@@ -32,9 +34,17 @@ struct kick_controller kick_ctrl = {
     .spr_trans_time = 10000     // 12s
 };
 
+/* Private Functions -----------------------------------------------------*/
+static void update_spr_mtr_pos(struct kick_controller *ctrl);
+
 /* Kick Part Init -----------------------------------------------------*/
+float basic_angle;
+static int a = 300, b = 192;
+static int diff = 60, k1 = 2.5;
 int kick_ctrl_init(struct kick_controller *ctrl) {
     ctrl->magnet_state = HAL_GPIO_ReadPin(MAGNET_PORT, MAGNET_PIN_1);
+    ctrl->spr_mtr_pos = as5047p_Get_Position_x() * 360 / 0x4000;
+    basic_angle = acos((b-diff)/a);    // 计算可能有点问题
     if (ctrl->magnet_state != NO_MAGNET) {
         uprintf("Pin State Error\r\n");
         return SL_ERROR;
@@ -68,6 +78,7 @@ void kick(struct kick_controller *ctrl) {
 
 
 void kick_test(struct kick_controller *ctrl) {
+    update_spr_mtr_pos(ctrl);
     switch (ctrl->state)
     {
     case KICK_READY:
@@ -79,7 +90,6 @@ void kick_test(struct kick_controller *ctrl) {
     case KICK_MAG_CONNECTED:
         if (kick_test_flag & SPR_MTR_BACK_MSK) {
             spr_mtr_back(ctrl);
-            ctrl->state = KICK_SPRING_READY;
         }
         break;
     
@@ -104,12 +114,12 @@ void kick_test(struct kick_controller *ctrl) {
 
 void kick_test_reset(struct kick_controller *ctrl) {
     kick_test_flag = 0;
-    ctrl->magnet_state = NO_MAGNET;
+    // ctrl->magnet_state = NO_MAGNET;
     ctrl->state = KICK_IDLE;
     ctrl->mag_mtr_state = MAG_MTR_READY;
     vesc_set_duty(SPR_MTR_EID, 0);
     md_set_duty(MAG_MTR_SID, 0);
-    magnet_free(); // 有待商榷
+    // magnet_free(); // 有待商榷
 }
 
 void kick_spring_free(struct kick_controller *ctrl) {
@@ -275,8 +285,10 @@ void mag_mtr_up_test(struct kick_controller *ctrl) {
  */
 void spr_mtr_back(struct kick_controller *ctrl) {
     vesc_set_duty(SPR_MTR_EID, ctrl->spr_mtr_back_duty);
-    HAL_Delay(ctrl->spr_mtr_back_time);
-    vesc_set_duty(SPR_MTR_EID, 0);
+    if (ctrl->spr_mtr_pos >= ctrl->spr_mtr_kick_pos) {
+        vesc_set_duty(SPR_MTR_EID, 0);
+        ctrl->state = KICK_SPRING_READY;
+    }
 }
 
 void mag_mtr_stop(void) {
@@ -316,11 +328,8 @@ MAGNET_STATE magnet_free(void) {
 static const int HEDM_PPS = 1000;   // Pluse Per Second
 static const int SPR_MTR_MAX_RPM = 60;  // Round Per Minute;
 static const float SPR_MTR_R = 22.5;    // 大电机轴半径
-static int a = 300, b = 192;
-static int diff = 60, k1 = 2.5;
 // diff 6cm  spr angle 33 degree
 float set_spr_mtr_duty(struct kick_controller *ctrl) {
-    const float basic_angle = acos((b-diff)/a);    // 计算可能有点问题
     float angle = ctrl->mag_mtr_can_state.position*2*PI/HEDM_PPS/2 + basic_angle;
     float c = sqrtf(a*a + b*b - 2*a*b*cos(angle));
     float speed = a*b*sin(angle)*ctrl->mag_mtr_can_state.speed/HEDM_PPS*PI/c;
@@ -332,7 +341,7 @@ float set_spr_mtr_duty(struct kick_controller *ctrl) {
 }
 
 float set_mag_mtr_speed(struct kick_controller *ctrl) {
-    const float basic_angle = acos((b-diff)/a);    // 计算可能有点问题
+    //const float basic_angle = acos((b-diff)/a);    // 计算可能有点问题
     float line_speed = ctrl->spr_mtr_free_duty*SPR_MTR_R/(-100);
     float angle = ctrl->mag_mtr_can_state.position*2*PI/HEDM_PPS/2 + basic_angle;
     float c = sqrtf(a*a + b*b - 2*a*b*cos(angle));
@@ -341,4 +350,12 @@ float set_mag_mtr_speed(struct kick_controller *ctrl) {
     md_set_speed(MAG_MTR_SID, (int)res);
     set_spr_mtr_duty(ctrl);
     return res;
+}
+
+static void update_spr_mtr_pos(struct kick_controller *ctrl) {
+    ctrl->spr_mtr_pos = as5047p_Get_Position_x() * 360 / 0x4000;
+}
+
+float set_spr_mtr_kick_pos(struct kick_controller *ctrl) {
+
 }
